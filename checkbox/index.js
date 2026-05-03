@@ -138,7 +138,9 @@ async function main() {
                email: decoded.email || '',
            });
        } catch (err) {
-           console.warn('JWT verification failed:', err.message);
+           console.warn('JWT verification failed. Clearing stale cookies:', err.message);
+           res.clearCookie('token');
+           res.clearCookie('logged_in');
            return res.status(401).json({ loggedIn: false });
        }
    });
