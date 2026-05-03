@@ -5,7 +5,6 @@ import path from "path";
 import crypto from "crypto";
 import fs from "fs";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
 import cookieParser from "cookie-parser";
 import { eq, and } from "drizzle-orm";
 import { usersTable, oauthClientsTable, oauthCodesTable } from "./db/schema.js";
@@ -18,6 +17,11 @@ app.use(cookieParser());
 
 // Serve your frontend HTML files from the "public" folder!
 app.use(express.static(path.join(__dirname, "../public")));
+
+// --- Helper: Password Hashing ---
+function hashPassword(password: string, salt: string): string {
+  return crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
+}
 
 // --- Helper: Get or Generate RSA Key Pair ---
 let cachedPrivateKey: string | null = null;
@@ -150,8 +154,9 @@ app.post("/o/authenticate/sign-up", async (req, res) => {
       return res.status(409).json({ message: "An account with this email already exists. Please sign in." });
     }
 
-    // Hash the password securely using bcrypt
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash the password securely
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hashedPassword = hashPassword(password, salt);
 
     // Insert the new user
     const newUser = await db.insert(usersTable).values({
@@ -159,7 +164,7 @@ app.post("/o/authenticate/sign-up", async (req, res) => {
       lastName: lastName || null,
       email,
       password: hashedPassword,
-      salt: "bcrypt", // salt is embedded in the hash, using a placeholder
+      salt,
     }).returning({ id: usersTable.id });
 
     const userId = newUser[0].id;
@@ -194,13 +199,13 @@ app.post("/o/authenticate/sign-in", async (req, res) => {
       return res.status(401).json({ message: "User ID and password don't exist. Please sign up first." });
     }
 
-    // Verify password using bcrypt
-    if (!user.password) {
+    // Verify password
+    if (!user.password || !user.salt) {
       return res.status(401).json({ message: "Invalid credentials. Please sign up again." });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
+    const hashedAttempt = hashPassword(password, user.salt);
+    if (hashedAttempt !== user.password) {
       return res.status(401).json({ message: "Incorrect password. Please try again." });
     }
 

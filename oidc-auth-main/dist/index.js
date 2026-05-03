@@ -11,7 +11,6 @@ const path_1 = __importDefault(require("path"));
 const crypto_1 = __importDefault(require("crypto"));
 const fs_1 = __importDefault(require("fs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const bcrypt_1 = __importDefault(require("bcrypt"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const drizzle_orm_1 = require("drizzle-orm");
 const schema_js_1 = require("./db/schema.js");
@@ -21,6 +20,10 @@ app.use(express_1.default.json());
 app.use((0, cookie_parser_1.default)());
 // Serve your frontend HTML files from the "public" folder!
 app.use(express_1.default.static(path_1.default.join(__dirname, "../public")));
+// --- Helper: Password Hashing ---
+function hashPassword(password, salt) {
+    return crypto_1.default.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
+}
 // --- Helper: Get or Generate RSA Key Pair ---
 let cachedPrivateKey = null;
 let cachedPublicKey = null;
@@ -137,15 +140,16 @@ app.post("/o/authenticate/sign-up", async (req, res) => {
         if (existingUser.length > 0) {
             return res.status(409).json({ message: "An account with this email already exists. Please sign in." });
         }
-        // Hash the password securely using bcrypt
-        const hashedPassword = await bcrypt_1.default.hash(password, 10);
+        // Hash the password securely
+        const salt = crypto_1.default.randomBytes(16).toString("hex");
+        const hashedPassword = hashPassword(password, salt);
         // Insert the new user
         const newUser = await exports.db.insert(schema_js_1.usersTable).values({
             firstName: firstName || null,
             lastName: lastName || null,
             email,
             password: hashedPassword,
-            salt: "bcrypt", // salt is embedded in the hash, using a placeholder
+            salt,
         }).returning({ id: schema_js_1.usersTable.id });
         const userId = newUser[0].id;
         // Set the session cookie
@@ -174,12 +178,12 @@ app.post("/o/authenticate/sign-in", async (req, res) => {
         if (!user) {
             return res.status(401).json({ message: "User ID and password don't exist. Please sign up first." });
         }
-        // Verify password using bcrypt
-        if (!user.password) {
+        // Verify password
+        if (!user.password || !user.salt) {
             return res.status(401).json({ message: "Invalid credentials. Please sign up again." });
         }
-        const isMatch = await bcrypt_1.default.compare(password, user.password);
-        if (!isMatch) {
+        const hashedAttempt = hashPassword(password, user.salt);
+        if (hashedAttempt !== user.password) {
             return res.status(401).json({ message: "Incorrect password. Please try again." });
         }
         // Set the session cookie to the real user ID
