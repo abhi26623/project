@@ -22,50 +22,11 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
             padding: 2rem;
+            padding-top: 100px; /* Space for the fixed nav bar */
             position: relative;
             overflow-x: hidden;
-        }
-
-        /* floating blobs in the background */
-        body::before,
-        body::after {
-            content: "";
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.4;
-            z-index: 0;
-            animation: float 8s ease-in-out infinite alternate;
-        }
-
-        body::before {
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, #c4b5fd, #a78bfa);
-            top: -100px;
-            right: -80px;
-        }
-
-        body::after {
-            width: 350px;
-            height: 350px;
-            background: radial-gradient(circle, #93c5fd, #7dd3fc);
-            bottom: -80px;
-            left: -60px;
-            animation-delay: 4s;
-        }
-
-        @keyframes float {
-            0% {
-                transform: translate(0, 0) scale(1);
-            }
-
-            100% {
-                transform: translate(30px, -20px) scale(1.08);
-            }
         }
 
         /* Top bar for user info */
@@ -78,102 +39,116 @@
             display: flex;
             justify-content: flex-end;
             align-items: center;
-            padding: 0.75rem 1.5rem;
-            background: rgba(255,255,255,0.6);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-bottom: 1px solid rgba(255,255,255,0.5);
-            gap: 1rem;
+            padding: 0.75rem 2.5rem;
+            background: rgba(255, 255, 255, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+            gap: 1.5rem;
         }
 
         .user-name {
             font-weight: 600;
             font-size: 0.95rem;
-            color: #334155;
+            color: #475569;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-name::before {
+            content: "✨";
+            font-size: 1.1rem;
         }
 
         .btn {
-            padding: 0.5rem 1.25rem;
+            padding: 0.6rem 1.4rem;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             font-family: inherit;
-            font-size: 0.875rem;
+            font-size: 0.9rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
             text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .btn-login {
-            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            background: linear-gradient(135deg, #6366f1, #a855f7);
             color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
         }
         .btn-login:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.35);
+            filter: brightness(1.1);
         }
 
         .btn-logout {
-            background: #f1f5f9;
-            color: #475569;
-            border: 1px solid #e2e8f0;
+            background: rgba(255, 255, 255, 0.7);
+            color: #64748b;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(4px);
         }
         .btn-logout:hover {
-            background: #e2e8f0;
+            background: #ffffff;
+            color: #ef4444;
+            border-color: rgba(239, 68, 68, 0.2);
+            transform: translateY(-1px);
         }
 
         h1 {
             font-weight: 700;
-            font-size: 3rem;
-            margin-bottom: 0.5rem;
-            background: linear-gradient(135deg, #8b5cf6, #ec4899, #f97316);
+            font-size: 3.5rem;
+            margin-bottom: 0.25rem;
+            background: linear-gradient(135deg, #4f46e5, #9333ea, #db2777);
             background-size: 200% 200%;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            letter-spacing: -0.04em;
-            animation: gradientShift 4s ease-in-out infinite alternate;
+            letter-spacing: -0.05em;
+            animation: gradientShift 6s ease-in-out infinite alternate;
             position: relative;
             z-index: 1;
         }
 
         @keyframes gradientShift {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            100% {
-                background-position: 100% 50%;
-            }
+            0% { background-position: 0% 50%; }
+            100% { background-position: 100% 50%; }
         }
 
         .subtitle {
-            font-size: 1rem;
-            color: #94a3b8;
-            margin-bottom: 2rem;
-            letter-spacing: 0.15em;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 2.5rem;
+            letter-spacing: 0.3em;
             text-transform: uppercase;
+            font-weight: 600;
             position: relative;
             z-index: 1;
+            opacity: 0.8;
         }
 
         #container {
             position: relative;
             z-index: 1;
-            background: rgba(255, 255, 255, 0.55);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
             padding: 2.5rem;
-            border-radius: 24px;
+            border-radius: 32px;
             box-shadow:
-                0 20px 50px -12px rgba(139, 92, 246, 0.12),
-                0 8px 20px -8px rgba(0, 0, 0, 0.06),
-                inset 0 1px 0 rgba(255, 255, 255, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.6);
+                0 25px 50px -12px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.4);
             display: grid;
             grid-template-columns: repeat(10, 1fr);
-            gap: 1rem;
-            max-width: 580px;
+            gap: 0.85rem;
+            max-width: 520px;
             width: 100%;
             justify-items: center;
         }
