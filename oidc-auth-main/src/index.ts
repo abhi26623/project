@@ -23,8 +23,9 @@ function hashPassword(password: string, salt: string): string {
   return crypto.pbkdf2Sync(password, salt, 100000, 64, "sha512").toString("hex");
 }
 
-// --- Helper: Get or Generate Private Key ---
+// --- Helper: Get or Generate RSA Key Pair ---
 let cachedPrivateKey: string | null = null;
+let cachedPublicKey: string | null = null;
 
 function getPrivateKey(): string {
   if (cachedPrivateKey) return cachedPrivateKey;
@@ -33,24 +34,38 @@ function getPrivateKey(): string {
   try {
     const keyPath = path.join(__dirname, "../cert/private-key.pem");
     cachedPrivateKey = fs.readFileSync(keyPath, "utf8");
+    // Derive the public key from the private key
+    cachedPublicKey = crypto.createPublicKey(cachedPrivateKey).export({ type: "spki", format: "pem" }) as string;
     console.log("Loaded private key from disk.");
     return cachedPrivateKey;
   } catch {
     // Key not found on disk (e.g., on Render), generate one in memory
     console.log("Private key file not found. Generating one in memory...");
-    const { privateKey } = crypto.generateKeyPairSync("rsa", {
+    const { privateKey, publicKey } = crypto.generateKeyPairSync("rsa", {
       modulusLength: 2048,
       publicKeyEncoding: { type: "spki", format: "pem" },
       privateKeyEncoding: { type: "pkcs8", format: "pem" },
     });
     cachedPrivateKey = privateKey;
+    cachedPublicKey = publicKey;
     console.log("In-memory RSA key pair generated successfully.");
     return cachedPrivateKey;
   }
 }
 
+function getPublicKey(): string {
+  if (!cachedPublicKey) getPrivateKey(); // ensure keys are initialised
+  return cachedPublicKey!;
+}
+
 app.get("/", (req, res) => {
   res.send("<h1>OIDC Auth Server is Running!</h1>");
+});
+
+// --- Public Key Endpoint (so clients can verify RS256 tokens) ---
+app.get("/public-key", (req, res) => {
+  res.set("Content-Type", "text/plain");
+  res.send(getPublicKey());
 });
 
 // --- 1. Developer App Registration ---
