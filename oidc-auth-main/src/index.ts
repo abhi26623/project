@@ -15,6 +15,12 @@ const app = express();
 app.use(express.json());
 app.use(cookieParser());
 
+// Global Error Handler to catch and show errors instead of just "Internal Server Error"
+app.use((err, req, res, next) => {
+  console.error("🔥 Global Error:", err);
+  res.status(500).send(`<h1>Internal Server Error</h1><pre>${err.message}</pre>`);
+});
+
 // Serve your frontend HTML files from the "public" folder!
 app.use(express.static(path.join(__dirname, "../public")));
 
