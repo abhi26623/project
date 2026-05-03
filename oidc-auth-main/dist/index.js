@@ -109,6 +109,13 @@ app.get("/authorize", async (req, res) => {
             res.clearCookie("oidc_session");
             return res.redirect(`/authenticate.html?client_id=${client_id}&redirect_uri=${redirect_uri}&app_name=${encodeURIComponent(client.name)}`);
         }
+        // Verify user still exists in the database (Self-healing)
+        const userResult = await exports.db.select().from(schema_js_1.usersTable).where((0, drizzle_orm_1.eq)(schema_js_1.usersTable.id, sessionUserId));
+        if (userResult.length === 0) {
+            console.warn("Session user not found in DB. Clearing cookie.");
+            res.clearCookie("oidc_session");
+            return res.redirect(`/authenticate.html?client_id=${client_id}&redirect_uri=${redirect_uri}&app_name=${encodeURIComponent(client.name)}`);
+        }
         // Generate short code
         const shortCode = crypto_1.default.randomBytes(16).toString("hex");
         const expiresAt = new Date(Date.now() + 60 * 1000); // 1 min expiration
