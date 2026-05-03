@@ -37,12 +37,11 @@ Users visit the Checkbox app and see a 10×10 grid of 100 checkboxes. The state 
 
 - 🔐 **OIDC Authorization Code Flow** — Full sign-up/sign-in with code exchange and JWT issuance
 - 🗄️ **Database-backed users** — All user accounts stored securely in Neon PostgreSQL
-- 🔑 **Secure password hashing** — PBKDF2-SHA512 with a unique random salt per user
-- 🛡️ **RS256 JWT tokens** — RSA-signed access tokens; auto-generates key in memory if `.pem` file is missing
+- 🔑 **Secure password hashing** — PBKDF2-SHA512- 🛡️ **Verified RS256 JWTs** — RSA-signed access tokens are fully verified using a public key fetched dynamically from the auth server
 - ⚡ **Real-time sync** — All 100 checkboxes stay in sync across every connected browser using Socket.IO
 - 📡 **Redis Pub/Sub** — Checkbox updates broadcast across server instances via Redis channels
 - 👤 **User identity display** — Logged-in user's name shown in the nav bar
-- 🔒 **Protected interaction** — Unauthenticated users are redirected to login when clicking checkboxes
+- 🔒 **Secure Identity** — Protected `/api/me` endpoint verifies token signatures to prevent spoofing
 - ⏱️ **Rate limiting** — 1-second cooldown between checkbox clicks to prevent spamming
 - 🚪 **Logout** — Clears all session cookies and redirects to home
 
@@ -55,7 +54,7 @@ project/
 ├── checkbox/               # Real-time checkbox web app
 │   ├── public/
 │   │   └── index.html      # Frontend (HTML + CSS + JS)
-│   ├── index.js            # Express + Socket.IO server
+│   ├── index.js            # Express + Socket.IO + JWT Verification
 │   ├── redis-connection.js # Redis client setup
 │   ├── .env.example        # Environment variable template
 │   └── package.json
@@ -65,7 +64,7 @@ project/
     │   ├── authenticate.html  # Sign-in page
     │   └── signup.html        # Sign-up page
     ├── src/
-    │   ├── index.ts           # Main server (all OIDC endpoints)
+    │   ├── index.ts           # Main server (all OIDC + /public-key)
     │   └── db/
     │       └── schema.ts      # Drizzle ORM schema
     ├── cert/                  # (optional) RSA private key
@@ -102,14 +101,15 @@ pnpm install
 # Copy env template and fill in your values
 cp .env.example .env
 
-# Run database migrations
+# Generate/Run database migrations
+pnpm db:generate
 pnpm db:migrate
 
 # Start the server in development mode
 pnpm dev
 ```
 
-The auth server runs on **http://localhost:9005**
+The auth server runs on **http://localhost:9005**. It exposes a `/public-key` endpoint.
 
 ### 3. Set up the Checkbox App
 
@@ -126,7 +126,7 @@ cp .env.example .env
 pnpm dev
 ```
 
-The checkbox app runs on **http://localhost:8080**
+The checkbox app runs on **http://localhost:8080**. At startup, it fetches the public key from the auth server.
 
 ### 4. Register your Checkbox app as an OIDC client
 
@@ -200,7 +200,7 @@ Leave `REDIS_PASSWORD` empty and use `localhost:6379`.
 
 ## 🔐 Auth Flow Explanation
 
-This project implements the **OIDC Authorization Code Flow**:
+This project implements the **OIDC Authorization Code Flow** with cryptographic verification:
 
 ```
 User clicks "Login"
@@ -239,6 +239,11 @@ User enters email + password on authenticate.html
 [Checkbox App] Stores JWT in httpOnly `token` cookie
         │  Sets visible `logged_in` cookie for frontend
         │  Redirects user to /
+        ▼
+[Checkbox App] GET /api/me
+        │  Fetches RSA Public Key from [OIDC Server]/public-key
+        │  Verifies RS256 signature of the `token` cookie
+        │  If valid: returns { loggedIn: true, name: "..." }
         ▼
 User is logged in ✅ — Name shown in nav bar
 ```
@@ -303,6 +308,11 @@ if (elapsed < 1000 && lastClickTime !== 0) {
 | Feature | Implementation |
 |---|---|
 | Password storage | PBKDF2-SHA512, 100,000 iterations, random 16-byte salt per user |
+| JWT signing | RSA 2048-bit (RS256); auto-generates in-memory key if `.pem` is absent |
+| Token Verification | RS256 Signature verification using public key (OIDC /public-key) |
+| Session cookie | `httpOnly: true`, `sameSite: lax` — not readable by JavaScript |
+| Token cookie | `httpOnly: true` — only accessible server-side via `/api/me` |
+| Auth codes | Single-use, stored in DB, expire in 60 seconds |dom 16-byte salt per user |
 | JWT signing | RSA 2048-bit (RS256); auto-generates in-memory key if `.pem` is absent |
 | Session cookie | `httpOnly: true`, `sameSite: lax` — not readable by JavaScript |
 | Token cookie | `httpOnly: true` — only accessible server-side via `/api/me` |
