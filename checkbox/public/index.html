@@ -283,9 +283,9 @@
                         const now = Date.now()
                         const elapsed = now - lastClickTime
                         
-                        if (elapsed < 5000 && lastClickTime !== 0) {
+                        if (elapsed < 1000 && lastClickTime !== 0) {
                             event.target.checked = !event.target.checked
-                            errorMsg.innerText = `Wait for ${Math.ceil((5000 - elapsed) / 1000)} remaining sec to click next checkbox.`
+                            errorMsg.innerText = `Wait a moment before clicking again.`
                         } else {
                             errorMsg.innerText = ''
                             lastClickTime = now
