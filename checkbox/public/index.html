@@ -68,6 +68,60 @@
             }
         }
 
+        /* Top bar for user info */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.5);
+            gap: 1rem;
+        }
+
+        .user-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: #334155;
+        }
+
+        .btn {
+            padding: 0.5rem 1.25rem;
+            border: none;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        .btn-login {
+            background: linear-gradient(135deg, #8b5cf6, #ec4899);
+            color: white;
+        }
+        .btn-login:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        }
+
+        .btn-logout {
+            background: #f1f5f9;
+            color: #475569;
+            border: 1px solid #e2e8f0;
+        }
+        .btn-logout:hover {
+            background: #e2e8f0;
+        }
+
         h1 {
             font-weight: 700;
             font-size: 3rem;
@@ -196,6 +250,11 @@
 </head>
 
 <body>
+    <!-- Top bar for auth status -->
+    <div class="top-bar" id="topBar">
+        <a href="/login" class="btn btn-login" id="loginBtn">Login</a>
+    </div>
+
     <h1>CheckBox</h1>
     <p class="subtitle">click them all</p>
     <div id="error-msg" style="color: red; text-align: center; font-weight: bold; min-height: 24px; margin-bottom: 10px;"></div>
@@ -205,9 +264,32 @@
         const socket = io()
         const parent = document.getElementById('container')
         const errorMsg = document.getElementById('error-msg')
+        const topBar = document.getElementById('topBar')
+        const loginBtn = document.getElementById('loginBtn')
         let lastClickTime = 0
+        let isLoggedIn = false
+
+        // Check auth status on page load
+        async function checkAuth() {
+            try {
+                const res = await fetch('/api/me')
+                const data = await res.json()
+                if (data.loggedIn) {
+                    isLoggedIn = true
+                    topBar.innerHTML = `
+                        <span class="user-name">👋 Hello, ${data.name}</span>
+                        <a href="/logout" class="btn btn-logout">Logout</a>
+                    `
+                }
+            } catch {
+                // Not logged in, keep default login button
+            }
+        }
 
         window.addEventListener('load', async () => {
+            // Check auth first
+            await checkAuth()
+
             const response = await fetch('/checkboxes', { method: 'GET' })
             const data = await response.json()
             if (data && data.checkboxes) {
@@ -217,7 +299,7 @@
                     input.type = 'checkbox'
                     input.checked = serverValue
                     input.addEventListener('change', (event) => {
-                        if (!document.cookie.includes('token=')) {
+                        if (!isLoggedIn) {
                             event.target.checked = !event.target.checked;
                             window.location.href = '/login';
                             return;
@@ -241,27 +323,12 @@
             }
         })
 
-        // const totalCheckBox = 100
-
-
-
         socket.on('server:checkbox:update', (data) => {
             console.log('server:checkbox:update', data)
             const { index, checked } = data
             const input = document.getElementById('check' + index)
             input.checked = checked
         })
-        // new Array(totalCheckBox).fill(null).forEach((_, index) => {
-        //     const input = document.createElement('input');
-        //     input.type = 'checkbox';
-        //     input.id='check'+index;
-        //     input.addEventListener('change', (event) => {
-        //         const checked = event.target.checked
-        //         console.log("Check Box changed ", { index, checked })
-        //         socket.emit('client:checkbox:click', { index, checked })
-        //     })
-        //     parent.appendChild(input);
-        // })
     </script>
 </body>
 

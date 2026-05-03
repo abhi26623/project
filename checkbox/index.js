@@ -14,6 +14,18 @@ const states = {
    checkboxes: new Array(checkCount).fill(false)
 }
 
+// Simple JWT payload decoder (no verification needed — we set the cookie ourselves)
+function decodeJwtPayload(token) {
+   try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return null;
+      const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
+      return JSON.parse(payload);
+   } catch {
+      return null;
+   }
+}
+
 async function main() {
    const app = express()
    const server = http.createServer(app)
@@ -48,8 +60,6 @@ async function main() {
             initialData[data.index] = data.checked
             await redis.set(CHECKBOX_STATE_KEY, JSON.stringify(initialData))
          }
-         // io.emit('server:checkbox:update', data)
-         // states.checkboxes[data.index] = data.checked
         await  publisher.publish('internal-server:checkbox:update',
             JSON.stringify(data)
          )
@@ -90,7 +100,10 @@ async function main() {
            const data = await tokenRes.json();
            
            if (data.access_token) {
-               res.cookie('token', data.access_token, { httpOnly: true });
+               // Set httpOnly token for security
+               res.cookie('token', data.access_token, { httpOnly: true, sameSite: 'lax' });
+               // Set a visible cookie so the frontend JS knows the user is logged in
+               res.cookie('logged_in', '1', { sameSite: 'lax' });
                return res.redirect('/');
            }
            res.status(401).send("Authentication failed");
@@ -98,6 +111,28 @@ async function main() {
            console.error("Error fetching token from OIDC:", err);
            res.status(500).send("Internal Error");
        }
+   });
+
+   // --- User Info Endpoint ---
+   app.get('/api/me', (req, res) => {
+       const token = req.cookies.token;
+       if (!token) return res.status(401).json({ loggedIn: false });
+
+       const decoded = decodeJwtPayload(token);
+       if (!decoded) return res.status(401).json({ loggedIn: false });
+
+       return res.json({
+           loggedIn: true,
+           name: decoded.name || 'User',
+           email: decoded.email || '',
+       });
+   });
+
+   // --- Logout Endpoint ---
+   app.get('/logout', (req, res) => {
+       res.clearCookie('token');
+       res.clearCookie('logged_in');
+       res.redirect('/');
    });
    // ==========================================
 
