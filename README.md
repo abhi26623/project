@@ -27,7 +27,7 @@ Users visit the Checkbox app and see a 10×10 grid of 100 checkboxes. The state 
 | **Real-time** | Socket.IO (WebSockets) |
 | **Auth Standard** | Custom OIDC (Authorization Code Flow) |
 | **JWT Signing** | RS256 (RSA 2048-bit) via `jsonwebtoken` |
-| **Password Security** | PBKDF2-SHA512 with per-user salt via Node `crypto` |
+| **Password Security** | Bcrypt (10 rounds) |
 | **Frontend** | Vanilla HTML, CSS, JavaScript |
 | **Deployment** | [Render](https://render.com) (both services) |
 
@@ -307,7 +307,7 @@ if (elapsed < 1000 && lastClickTime !== 0) {
 
 | Feature | Implementation |
 |---|---|
-| Password storage | PBKDF2-SHA512, 100,000 iterations, random 16-byte salt per user |
+| Password storage | Bcrypt (10 rounds) |
 | JWT signing | RSA 2048-bit (RS256); auto-generates in-memory key if `.pem` is absent |
 | Token Verification | RS256 Signature verification using public key (OIDC /public-key) |
 | Session cookie | `httpOnly: true`, `sameSite: lax` — not readable by JavaScript |
