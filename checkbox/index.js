@@ -5,6 +5,7 @@ import path from 'node:path'
 import express from 'express'
 import cookieParser from 'cookie-parser'
 import { Server } from 'socket.io'
+import jwt from 'jsonwebtoken'
 import {publisher , subscriber,redis} from './redis-connection.js'
 
 
@@ -14,15 +15,18 @@ const states = {
    checkboxes: new Array(checkCount).fill(false)
 }
 
-// Simple JWT payload decoder (no verification needed — we set the cookie ourselves)
-function decodeJwtPayload(token) {
+// RSA public key fetched from the OIDC server at startup
+let oidcPublicKey = null;
+
+async function fetchPublicKey() {
+   const OIDC_URL = process.env.OIDC_SERVER_URL;
    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) return null;
-      const payload = Buffer.from(parts[1], 'base64url').toString('utf8');
-      return JSON.parse(payload);
-   } catch {
-      return null;
+      const res = await fetch(`${OIDC_URL}/public-key`);
+      if (!res.ok) throw new Error(`Status ${res.status}`);
+      oidcPublicKey = await res.text();
+      console.log('✅ Fetched OIDC public key successfully.');
+   } catch (err) {
+      console.error('❌ Failed to fetch OIDC public key:', err.message);
    }
 }
 
@@ -31,6 +35,9 @@ async function main() {
    const server = http.createServer(app)
    const io = new Server()
    const PORT = process.env.PORT ?? 8080
+
+   // Fetch the OIDC public key before handling any requests
+   await fetchPublicKey()
 
    io.attach(server)
 
@@ -118,14 +125,22 @@ async function main() {
        const token = req.cookies.token;
        if (!token) return res.status(401).json({ loggedIn: false });
 
-       const decoded = decodeJwtPayload(token);
-       if (!decoded) return res.status(401).json({ loggedIn: false });
+       if (!oidcPublicKey) {
+           console.error('Public key not loaded yet.');
+           return res.status(503).json({ loggedIn: false, error: 'Auth service unavailable' });
+       }
 
-       return res.json({
-           loggedIn: true,
-           name: decoded.name || 'User',
-           email: decoded.email || '',
-       });
+       try {
+           const decoded = jwt.verify(token, oidcPublicKey, { algorithms: ['RS256'] });
+           return res.json({
+               loggedIn: true,
+               name: decoded.name || 'User',
+               email: decoded.email || '',
+           });
+       } catch (err) {
+           console.warn('JWT verification failed:', err.message);
+           return res.status(401).json({ loggedIn: false });
+       }
    });
 
    // --- Logout Endpoint ---
