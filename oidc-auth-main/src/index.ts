@@ -225,9 +225,21 @@ app.post("/token", async (req, res) => {
 
     await db.delete(oauthCodesTable).where(eq(oauthCodesTable.id, validCode.id));
 
+    // Look up the user to include their info in the token
+    let userName = "User";
+    let userEmail = "";
+    if (validCode.userId) {
+      const userResult = await db.select().from(usersTable).where(eq(usersTable.id, validCode.userId));
+      const user = userResult[0];
+      if (user) {
+        userName = [user.firstName, user.lastName].filter(Boolean).join(" ") || "User";
+        userEmail = user.email;
+      }
+    }
+
     const privateKey = getPrivateKey();
     const token = jwt.sign(
-      { userId: validCode.userId || "unknown", role: "user" },
+      { userId: validCode.userId || "unknown", name: userName, email: userEmail, role: "user" },
       privateKey,
       { algorithm: "RS256", expiresIn: "1h" }
     );
