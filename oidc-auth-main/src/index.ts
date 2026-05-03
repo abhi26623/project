@@ -89,7 +89,16 @@ app.get("/authorize", async (req, res) => {
     if (!client || client.redirectUri !== redirect_uri) return res.status(400).send("Invalid client or redirect URI mismatch");
 
     // Check if user is logged into the OIDC server
-    if (!req.cookies.oidc_session) {
+    const sessionUserId = req.cookies.oidc_session;
+    if (!sessionUserId) {
+      return res.redirect(`/authenticate.html?client_id=${client_id}&redirect_uri=${redirect_uri}&app_name=${encodeURIComponent(client.name)}`);
+    }
+
+    // Validate the session cookie is a real UUID (not an old dummy value)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(sessionUserId)) {
+      // Old invalid cookie — clear it and send to login
+      res.clearCookie("oidc_session");
       return res.redirect(`/authenticate.html?client_id=${client_id}&redirect_uri=${redirect_uri}&app_name=${encodeURIComponent(client.name)}`);
     }
 
@@ -100,7 +109,7 @@ app.get("/authorize", async (req, res) => {
     await db.insert(oauthCodesTable).values({
       code: shortCode,
       clientId: String(client_id),
-      userId: req.cookies.oidc_session,
+      userId: sessionUserId,
       expiresAt
     });
 
