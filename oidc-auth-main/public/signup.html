@@ -311,7 +311,7 @@
     </form>
 
     <div class="footer">
-      Already have an account? <a href="/o/authenticate">Sign in</a>
+      Already have an account? <a id="signinLink" href="/authenticate.html">Sign in</a>
     </div>
   </div>
 
@@ -327,6 +327,12 @@
     const confirmHint = document.getElementById('confirmHint');
 
     const params = new URLSearchParams(window.location.search);
+
+    // Preserve query params on Sign in link
+    const signinLink = document.getElementById('signinLink');
+    if (window.location.search) {
+      signinLink.href = `/authenticate.html${window.location.search}`;
+    }
 
     confirmInput.addEventListener('input', () => {
       const mismatch = confirmInput.value && confirmInput.value !== passwordInput.value;

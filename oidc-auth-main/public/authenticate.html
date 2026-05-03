@@ -272,7 +272,7 @@
     </form>
 
     <div class="footer">
-      Don't have an account? <a href="/signup.html">Sign up</a>
+      Don't have an account? <a id="signupLink" href="/signup.html">Sign up</a>
     </div>
   </div>
 
@@ -287,6 +287,12 @@
     const appName = params.get('app_name');
     if (appName) {
       document.querySelector('.subtitle').textContent = `Sign in to ${appName} to continue`;
+    }
+
+    // Preserve query params on Sign up link
+    const signupLink = document.getElementById('signupLink');
+    if (window.location.search) {
+      signupLink.href = `/signup.html${window.location.search}`;
     }
 
     function showError(msg) {
